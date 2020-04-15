@@ -44,6 +44,9 @@ import cc.suitalk.ipcinvoker.recycle.ObjectRecycler;
 import cc.suitalk.ipcinvoker.tools.Log;
 
 /**
+ * 1、IPCBridge的核心管理类，维护了所有进程对应的service以及IPCBridge，提供建立和销毁IPCBridge的方法
+ * 2、IPCBridgeManager会多个进程中触发调用，所以当前进程不是参数指定的进程的时候基本上都不需要处理
+ * <p>
  * Created by albieliang on 2017/5/14.
  */
 
@@ -53,10 +56,10 @@ class IPCBridgeManager {
 
     private static volatile IPCBridgeManager sInstance;
 
-    private Map<String, Class<?>> mServiceClassMap;
+    private Map<String, Class<?>> mServiceClassMap;//javayhu key是进程名，value是这个进程对应的service的类
     private Handler mHandler;
 
-    private Map<String, IPCBridgeWrapper> mBridgeMap;
+    private Map<String, IPCBridgeWrapper> mBridgeMap;//javayhu key是进程名，value是这个进程对应的IPCBridge的封装类
 
     private volatile boolean mLockCreateBridge;
     private int mBindServiceFlags = Context.BIND_AUTO_CREATE | Context.BIND_WAIVE_PRIORITY;
@@ -88,12 +91,12 @@ class IPCBridgeManager {
     @WorkerThread
     public AIDL_IPCInvokeBridge getIPCBridge(@NonNull final String process, @NonNull IPCTaskExtInfo extInfo) {
         IPCBridgeWrapper bridgeWrapper;
-        synchronized (mBridgeMap) {
+        synchronized (mBridgeMap) {//javayhu 1、先确保有个IPCBridgeWrapper
             bridgeWrapper = mBridgeMap.get(process);
             Log.d(TAG, "getIPCBridge(%s), getFromMap(bw : %s)", process, bridgeWrapper != null ? bridgeWrapper.hashCode() : null);
             if (bridgeWrapper != null) {
                 try {
-                    bridgeWrapper.latch.await();
+                    bridgeWrapper.latch.await();//javayhu 这里是为什么？这里可能是已经有了bridgeWrapper，但是当前可能还不能使用
                 } catch (InterruptedException e) {
                     Log.e(TAG, "getIPCBridge, latch.await() error, %s", e);
                 }
@@ -102,11 +105,11 @@ class IPCBridgeManager {
             bridgeWrapper = new IPCBridgeWrapper();
             mBridgeMap.put(process, bridgeWrapper);
         }
-        if (mLockCreateBridge) {
+        if (mLockCreateBridge) {//javayhu 这里是为什么？极限情况下可能process进程正在自杀，这个时候就没有必要在这个进程创建IPCBridge了
             Log.i(TAG, "build IPCBridge(process : %s) failed, locked.", process);
             return null;
         }
-        if (Looper.getMainLooper() == Looper.myLooper()) {
+        if (Looper.getMainLooper() == Looper.myLooper()) {//javayhu 不能在主线程建立IPCBridge，为什么这个不在这个方法最开始执行？
             RemoteServiceNotConnectedException e = new RemoteServiceNotConnectedException("can not invoke on main-thread, the remote service not connected.");
             Log.w(TAG, "getIPCBridge failed, can not create bridge on Main thread. exception : %s", android.util.Log.getStackTraceString(e));
             if (Debugger.isDebug()) {
@@ -114,13 +117,13 @@ class IPCBridgeManager {
             }
             return null;
         }
-        Class<?> serviceClass = getServiceClass(process);
+        Class<?> serviceClass = getServiceClass(process);//javayhu 2、拿到process对应进程的service类，然后与之建立连接
         if (serviceClass == null) {
             Log.w(TAG, "getServiceClass by '%s', got null.", process);
             return null;
         }
         final Context context = IPCInvokeLogic.getContext();
-        final IPCBridgeWrapper bw = bridgeWrapper;
+        final IPCBridgeWrapper bw = bridgeWrapper;//javayhu bw是前面刚刚新建的bridgeWrapper
         final OnExceptionObserver onExceptionObserver = extInfo.getOnExceptionObserver();
         final ServiceConnection serviceConnection = extInfo.getServiceConnection();
 
@@ -144,7 +147,7 @@ class IPCBridgeManager {
                         bw.bridge = AIDL_IPCInvokeBridge.Stub.asInterface(service);
                     }
                     try {
-                        service.linkToDeath(new DeathRecipientImpl(process), 0);
+                        service.linkToDeath(new DeathRecipientImpl(process), 0);//javayhu 设置死亡监听
                     } catch (RemoteException e) {
                         Log.e(TAG, "binder register linkToDeath listener error, %s", android.util.Log.getStackTraceString(e));
                     }
@@ -155,11 +158,11 @@ class IPCBridgeManager {
                 synchronized (bw) {
                     bw.connectTimeoutRunnable = null;
                 }
-                bw.latch.countDown();
-                if (serviceConnection != null) {
+                bw.latch.countDown();//javayhu ① 通知到下面bw.latch.await()，连接建立成功了
+                if (serviceConnection != null) {//javayhu serviceConnection是参数extInfo传过来的，也通知下外部连接建立成功
                     serviceConnection.onServiceConnected(name, service);
                 }
-                ServiceConnectionManager.dispatchOnServiceConnected(process, name, service);
+                ServiceConnectionManager.dispatchOnServiceConnected(process, name, service);//javayhu 通知所有监听了这个进程连接情况的监听器
             }
 
             @Override
@@ -179,17 +182,17 @@ class IPCBridgeManager {
                             , bw.hashCode(), bridgeWrapper.hashCode(), process);
                     return;
                 }
-                bw.latch.countDown();
+                bw.latch.countDown();//javayhu ② 通知到下面bw.latch.await()，连接建立失败了
                 bridgeWrapper.latch.countDown();
                 synchronized (bridgeWrapper) {
                     bridgeWrapper.bridge = null;
                     bridgeWrapper.serviceConnection = null;
                 }
                 ObjectRecycler.recycleAll(process);
-                if (serviceConnection != null) {
+                if (serviceConnection != null) {//javayhu serviceConnection是参数extInfo传过来的，也通知下外部连接建立失败
                     serviceConnection.onServiceDisconnected(name);
                 }
-                ServiceConnectionManager.dispatchOnServiceDisconnected(process, name);
+                ServiceConnectionManager.dispatchOnServiceDisconnected(process, name);//javayhu 通知所有监听了这个进程连接情况的监听器
             }
         };
         synchronized (bw) {
@@ -206,7 +209,7 @@ class IPCBridgeManager {
                     if (bw.latch.getCount() == 0) {
                         return;
                     }
-                    bw.latch.countDown();
+                    bw.latch.countDown();//javayhu ③ 通知到下面bw.latch.await()，连接建立超时了
                     // Prevent deadlocks
                     synchronized (bw) {
                         bw.connectTimeoutRunnable = null;
@@ -217,7 +220,7 @@ class IPCBridgeManager {
                 }
             };
             mHandler.postDelayed(bw.connectTimeoutRunnable, extInfo.getTimeout());
-            bw.latch.await();
+            bw.latch.await();//javayhu 3、等着IPC连接建立结果，如果连接成功的话就继续往下执行，如果连接失败或者超时就结束
             if (bw.connectTimeoutRunnable != null) {
                 mHandler.removeCallbacks(bw.connectTimeoutRunnable);
                 bw.connectTimeoutRunnable = null;
@@ -273,13 +276,14 @@ class IPCBridgeManager {
             Log.i(TAG, "releaseIPCBridge(%s) failed, IPCBridgeWrapper is null.", process);
             return false;
         }
-        bridgeWrapper.latch.countDown();
+        bridgeWrapper.latch.countDown();//javayhu 这里是为什么
         synchronized (bridgeWrapper) {
             if (bridgeWrapper.serviceConnection == null) {
                 Log.i(TAG, "releaseIPCBridge(%s) failed, ServiceConnection is null.", process);
                 return false;
             }
         }
+        //javayhu 这里为什么要抛线程执行？里面的核心操作应该是unbindService，那个方法已经做了线程切换，这里是否没必要切换线程？
         mHandler.post(new Runnable() {
             @Override
             public void run() {

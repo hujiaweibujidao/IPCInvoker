@@ -22,12 +22,14 @@ import android.content.ServiceConnection;
 import cc.suitalk.ipcinvoker.exception.OnExceptionObserver;
 
 /**
+ * IPC任务的执行信息，例如超时时间、是否有默认的返回值、监听连接结果的serviceConnection以及监听异常的onExceptionObserver
+ * <p>
  * Created by albieliang on 2018/5/8.
  */
 
 class IPCTaskExtInfo<ResultType> {
 
-    public static final IPCTaskExtInfo DEFAULT = new IPCTaskExtInfo();
+    public static final IPCTaskExtInfo DEFAULT = new IPCTaskExtInfo();//javayhu 基本全部情况下使用的都是这个默认的
 
     public static final long DEFAULT_TIMEOUT = 10 * 1000;
 

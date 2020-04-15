@@ -41,6 +41,6 @@ public class DeathRecipientImpl implements IBinder.DeathRecipient {
         if (process == null || process.length() == 0) {
             return;
         }
-        ObjectRecycler.recycleAll(process);
+        ObjectRecycler.recycleAll(process);//javayhu 清空这个进程中所有可回收的对象
     }
 }

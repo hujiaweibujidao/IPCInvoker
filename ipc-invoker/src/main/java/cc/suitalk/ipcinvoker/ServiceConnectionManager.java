@@ -14,6 +14,8 @@ import cc.suitalk.ipcinvoker.annotation.NonNull;
 import cc.suitalk.ipcinvoker.tools.Log;
 
 /**
+ * 管理每个进程的ServiceConnection，每个进程都可能和其他多个进程建立连接，所以是Map<String, List<ServiceConnection>>的结构
+ *
  * Created by albieliang on 2018/9/21.
  */
 

@@ -25,6 +25,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * 支持自定义类型的数据传递，这个和Parcelable接口有什么区别？
+ * <p>
  * Created by albieliang on 2017/7/6.
  */
 

@@ -32,6 +32,8 @@ import cc.suitalk.ipcinvoker.recycle.Recyclable;
 import cc.suitalk.ipcinvoker.tools.Log;
 
 /**
+ * IPC的调用任务实际都是在这里调度进行处理
+ * <p>
  * Created by albieliang on 2018/5/7.
  */
 
@@ -75,8 +77,8 @@ public class IPCTaskExecutor {
         return ThreadCaller.execute(new Runnable() {
             @Override
             public void run() {
-                if (IPCInvokeLogic.isCurrentProcess(process)) {
-                    IPCAsyncInvokeTask task = ObjectStore.get(taskClass, IPCAsyncInvokeTask.class);
+                if (IPCInvokeLogic.isCurrentProcess(process)) {//javayhu 直接在当前进程中执行
+                    IPCAsyncInvokeTask task = ObjectStore.get(taskClass, IPCAsyncInvokeTask.class);//javayhu 获取传入的IPCAsyncInvokeTask类型的对象
                     if (task == null) {
                         if (extInfo.hasDefaultResult() && callback != null) {
                             callback.onCallback(extInfo.getDefaultResult());
@@ -88,6 +90,7 @@ public class IPCTaskExecutor {
                     task.invoke(data, callback);
                     return;
                 }
+                //javayhu 要在其他进程中执行，与远程进程建立IPC连接(如果目标远程进程不在的话会唤起远程进程)
                 AIDL_IPCInvokeBridge bridge = IPCBridgeManager.getImpl().getIPCBridge(process, extInfo);
                 if (bridge == null) {
                     if (extInfo.hasDefaultResult() && callback != null) {
@@ -99,15 +102,16 @@ public class IPCTaskExecutor {
                 }
                 try {
                     AIDL_IPCInvokeCallback invokeCallback = null;
-                    if (callback != null) {
+                    if (callback != null) {//javayhu 将回调信息包装成IPCInvokeCallbackWrapper，也就是AIDL_IPCInvokeCallback，因为它才能跨进程传输
                         invokeCallback = new IPCInvokeCallbackWrapper(process, callback);
                     }
+                    //javayhu 通过IPCBridge最终触发远程接口调用
                     bridge.invokeAsync(buildBundle(data, taskClass), taskClass.getName(), invokeCallback);
                     return;
                 } catch (RemoteException e) {
                     Log.d(TAG, "invokeAsync failed, ipc invoke error : %s", e);
                     final OnExceptionObserver onExceptionObserver = extInfo.getOnExceptionObserver();
-                    if (onExceptionObserver != null) {
+                    if (onExceptionObserver != null) {//javayhu 发生了异常，通过extInfo的onExceptionObserver往外抛出去
                         onExceptionObserver.onExceptionOccur(e);
                     }
                 }
@@ -205,7 +209,7 @@ public class IPCTaskExecutor {
                 callback.onCallback(null);
                 return;
             }
-            data.setClassLoader(IPCInvoker.class.getClassLoader());
+            data.setClassLoader(IPCInvoker.class.getClassLoader());//javayhu 为什么这里要setClassLoader？又为什么要设置为IPCInvoker这个类的ClassLoader
             boolean releaseRef = data.getBoolean(BaseIPCService.INNER_KEY_COMMAND_RELEASE_REF);
             if (releaseRef) {
                 Log.d(TAG, "release ref of callback(%s)", callback.hashCode());

@@ -56,7 +56,7 @@ public class IPCInvokerApplication extends Application {
                 System.exit(0);
             }
         });
-        // Initialize IPCInvoker
+        //javayhu 对IPCInvoker进行初始化 Initialize IPCInvoker
         IPCInvoker.setup(this, new DefaultInitDelegate() {
 
             @Override

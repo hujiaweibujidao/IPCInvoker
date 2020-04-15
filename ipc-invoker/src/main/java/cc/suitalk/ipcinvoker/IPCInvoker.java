@@ -43,6 +43,8 @@ import cc.suitalk.ipcinvoker.tools.Log;
 import cc.suitalk.ipcinvoker.tools.log.ILogPrinter;
 
 /**
+ * IPC外部调用入口类，实际操作是转交给了IPCTaskExecutor
+ * <p>
  * Created by albieliang on 2017/5/13.
  */
 
@@ -50,6 +52,9 @@ public class IPCInvoker {
 
     private static final String TAG = "IPC.IPCInvoker";
 
+    /**
+     * IPCInvoker的初始化
+     */
     public static void setup(@NonNull final Application application, @NonNull IPCInvokerInitDelegate delegate) {
         Assert.assertNotNull(application);
         IPCInvokeLogic.setContext(application);

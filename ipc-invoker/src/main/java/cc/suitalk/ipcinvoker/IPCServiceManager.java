@@ -23,6 +23,8 @@ import java.util.Map;
 import cc.suitalk.ipcinvoker.annotation.NonNull;
 
 /**
+ * 管理BaseIPCService，有点奇怪，只有put和remove方法被调用，get方法没有地方使用
+ *
  * Created by albieliang on 2017/5/20.
  */
 

@@ -22,6 +22,8 @@ import android.os.HandlerThread;
 import android.os.Looper;
 
 /**
+ * 线程调度类，看着可以和ThreadPool整合在一起
+ *
  * Created by albieliang on 2017/6/8.
  */
 

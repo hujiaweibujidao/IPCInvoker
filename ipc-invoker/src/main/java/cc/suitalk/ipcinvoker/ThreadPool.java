@@ -34,6 +34,8 @@ import cc.suitalk.ipcinvoker.reflect.ReflectStaticFieldSmith;
 import cc.suitalk.ipcinvoker.tools.Log;
 
 /**
+ * 线程池，不过代码实现看起来有点混乱，里面有个workHandlerThread，还有个ExecutorService
+ *
  * Created by albieliang on 2017/5/20.
  */
 
@@ -102,7 +104,10 @@ class ThreadPool {
         });
         return handler;
     }
-    
+
+    /**
+     * 这里调用post和调用postDelayed差别有点大！！！
+     */
     public static boolean post(Runnable run) {
         if (run == null) {
             return false;
@@ -110,7 +115,7 @@ class ThreadPool {
         getImpl().mExecutorService.execute(run);
         return true;
     }
-    
+
     public static boolean postDelayed(Runnable run, long delayMillis) {
         if (run == null) {
             return false;

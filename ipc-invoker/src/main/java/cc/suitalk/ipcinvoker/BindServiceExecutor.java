@@ -9,6 +9,8 @@ import android.os.HandlerThread;
 import cc.suitalk.ipcinvoker.tools.Log;
 
 /**
+ * 专门在某个线程中完成bindService和unbindService两个操作
+ *
  * Created by albieliang on 2018/10/17.
  */
 

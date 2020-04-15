@@ -26,6 +26,8 @@ import cc.suitalk.ipcinvoker.reflect.ReflectUtil;
 import cc.suitalk.ipcinvoker.tools.Log;
 
 /**
+ * 对象存储类，实际上就是保存了一些已经创建好的类，需要的时候直接取出来用
+ *
  * Created by albieliang on 2017/7/9.
  */
 
@@ -66,12 +68,12 @@ public class ObjectStore {
                 String className = clazz.getName();
                 Singleton o = sMap.get(className);
                 if (o == null) {
-                    o = new Singleton(clazz);
+                    o = new Singleton(clazz);//javayhu 创建这个单例对象
                     sMap.put(className, o);
                 }
                 return (T) o.get();
             }
-            return ReflectUtil.newInstance(clazz, parentClass);
+            return ReflectUtil.newInstance(clazz, parentClass);//javayhu 通过反射创建一个该对象
         } catch (Exception e) {
         }
         return null;

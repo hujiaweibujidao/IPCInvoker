@@ -24,6 +24,9 @@ import cc.suitalk.ipcinvoker.tools.Log;
 import cc.suitalk.ipcinvoker.tools.storage.KVStorage;
 import cc.suitalk.ipcinvoker.type.IPCVoid;
 
+/**
+ * 恢复进程之前的IPCObserver以及退出前未处理的事件
+ */
 public class IPCObserverRestorer {
     private static final String TAG = "IPCInvoker.IPCObserverRestorer";
     // key: event,  value:observer

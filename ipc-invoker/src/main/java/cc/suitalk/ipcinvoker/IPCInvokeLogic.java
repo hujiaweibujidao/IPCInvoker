@@ -30,6 +30,8 @@ import cc.suitalk.ipcinvoker.annotation.NonNull;
 import cc.suitalk.ipcinvoker.tools.Log;
 
 /**
+ * IPCInvoker的逻辑处理类，主要是设置Context和一些进程相关的判断
+ * <p>
  * Created by albieliang on 2017/5/13.
  */
 

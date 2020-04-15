@@ -22,6 +22,8 @@ import cc.suitalk.ipcinvoker.tools.log.ILogPrinter;
 import cc.suitalk.ipcinvoker.tools.storage.KVStorage;
 
 /**
+ * IPCInvokerIPCInvoker的配置
+ * <p>
  * Created by albieliang on 2017/5/28.
  */
 
